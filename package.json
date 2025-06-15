@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/example.js",
-    "dev": "ts-node src/lib/seqta/example.ts"
+    "dev": "ts-node src/example.ts"
   },
   "dependencies": {
     "@types/tough-cookie": "^4.0.5",
