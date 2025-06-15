@@ -1,0 +1,23 @@
+{
+  "name": "seqta-client",
+  "version": "1.0.0",
+  "description": "Seqta Learn Client",
+  "main": "dist/example.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/example.js",
+    "dev": "ts-node src/lib/seqta/example.ts"
+  },
+  "dependencies": {
+    "@types/tough-cookie": "^4.0.5",
+    "fetch-cookie": "^3.1.0",
+    "node-fetch": "^2.6.7",
+    "tough-cookie": "^5.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.111",
+    "@types/node-fetch": "^2.6.12",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.8.4"
+  }
+}
