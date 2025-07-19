@@ -154,10 +154,19 @@ async function main(deeplink: string) {
     const recoveryData = await recoveryResponse.json();
     log('Recovery response data:', recoveryData);
 
-    // Save the app_link into seqtaDB
-    if (recoveryData.payload && recoveryData.payload.app_link) {
-      log('App link:', recoveryData.payload.app_link);
+    const applinkConfig = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${loginRequest.token}`,
+        'Referer': loginRequest.url
+      }
     }
+
+    const applinkUrl = `${loginRequest.url.replace('/login', '/load/profile')}`;
+    log('Sending applink request to:', applinkUrl);
+    const applinkResponse = await fetchWithCookies(applinkUrl, applinkConfig);
+    log ('Applink response status:', { status: applinkResponse.status, statusText: applinkResponse.statusText });
     
   } catch (error: unknown) {
     log('Error occurred:', {
