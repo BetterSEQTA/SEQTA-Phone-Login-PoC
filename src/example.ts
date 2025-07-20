@@ -69,104 +69,79 @@ async function main(deeplink: string) {
     const loginRequest = SeqtaAuth.handleDeeplink(deeplink);
     log('Parsed login request:', loginRequest);
 
+    const loginRequestConfig = {
+      method: 'POST',
+      headers: loginRequest.headers,
+      body: `{
+        token: ${loginRequest.token}
+      }`
+    }
+
     // Set the JWT as a cookie
     log('Setting JWT cookie');
     await jar.setCookie(`JSESSIONID=${loginRequest.token}`, loginRequest.url);
-    
-    // First login request
-    const firstLoginConfig = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${loginRequest.token}`,
-        'Referer': loginRequest.url
-      },
-      body: '{}'
-    };
-    log('First login request configuration:', firstLoginConfig);
-    const firstLoginResponse = await fetchWithCookies(loginRequest.url, firstLoginConfig);
-    log('First login response status:', { status: firstLoginResponse.status, statusText: firstLoginResponse.statusText });
 
-    // Recovery request
+    const firstLoginRequest = await fetchWithCookies(loginRequest.url, loginRequestConfig); // Send the initial login with the token set
+    log('First login resposne:', await firstLoginRequest.text());
+    
+    // Send the second login request. This returns information about the specific student, and confirms our login with the SEQTA server.
+    const secondLoginConfig = {
+      method: 'POST',
+      headers: loginRequest.headers,
+      body: JSON.stringify({
+        jwt: loginRequest.token
+      }),
+    };
+    log('Second login request configuration:', secondLoginConfig);
+    const secondLoginResponse = await fetchWithCookies(loginRequest.url, secondLoginConfig);
+    log('Second login response status:', { status: secondLoginResponse.status, statusText: secondLoginResponse.statusText });
+    log('Second login response:', await secondLoginResponse.text());
+
+    
+
+    // Recovery request - This returns more student info
     const recoveryConfig = {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${loginRequest.token}`,
-        'Referer': loginRequest.url
-      },
-      body: JSON.stringify({
-        mode: 'info',
-        recovery: loginRequest.token
-      })
+      headers: loginRequest.headers,
+      body: `{ mode: "info", recovery: ${loginRequest.token} }`
     };
     log('Recovery request configuration:', recoveryConfig);
     const recoveryUrl = `${loginRequest.url.replace('/login', '/recover')}`;
     log('Sending recovery request to:', recoveryUrl);
     const recoveryResponse = await fetchWithCookies(recoveryUrl, recoveryConfig);
     log('Recovery response status:', { status: recoveryResponse.status, statusText: recoveryResponse.statusText });
+    log('Recovery resposne text:', await recoveryResponse.text());
 
-    // Second login request
-    const secondLoginConfig = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${loginRequest.token}`,
-        'Referer': loginRequest.url
-      },
-      body: JSON.stringify({ jwt: loginRequest.token })
-    };
-    log('Second login request configuration:', secondLoginConfig);
-    const secondLoginResponse = await fetchWithCookies(loginRequest.url, secondLoginConfig);
-    log('Second login response status:', { status: secondLoginResponse.status, statusText: secondLoginResponse.statusText });
-
-    // Try to parse as JSON, but handle non-JSON responses
-    const contentType = secondLoginResponse.headers.get('content-type');
-    log('Response content type:', contentType);
     
-    if (contentType?.includes('application/json')) {
-      const data = await secondLoginResponse.json();
-      log('Login successful, received JSON response:', data);
-    } else {
-      const text = await secondLoginResponse.text();
-      log('Received non-JSON response:', text);
-    }
-    
-    // Send heartbeat request
+    // Send heartbeat request - Check if we're alive and kicking.
     const heartbeatConfig = {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${loginRequest.token}`,
-        'Referer': loginRequest.url
-      },
+      headers: loginRequest.headers,
       body: JSON.stringify({ heartbeat: true })
     };
     log('Heartbeat request configuration:', heartbeatConfig);
 
-    // Send heartbeat request
     const heartbeatUrl = `${loginRequest.url.replace('/login', '/heartbeat')}`;
     log('Sending heartbeat request to:', heartbeatUrl);
     const heartbeatResponse = await fetchWithCookies(heartbeatUrl, heartbeatConfig);
     log('Heartbeat response status:', { status: heartbeatResponse.status, statusText: heartbeatResponse.statusText });
-    
-    // Parse the recovery response
-    const recoveryData = await recoveryResponse.json();
-    log('Recovery response data:', recoveryData);
 
+    log('Heartbeat resposne text:', await heartbeatResponse.text());
+
+    // The /load/profile endpoint allows us to request a new SEQTA app deeplink, allowing us to continually renew access.
     const applinkConfig = {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${loginRequest.token}`,
-        'Referer': loginRequest.url
-      }
-    }
+      headers: loginRequest.headers,
+      body: "{}"
+    };
 
     const applinkUrl = `${loginRequest.url.replace('/login', '/load/profile')}`;
     log('Sending applink request to:', applinkUrl);
     const applinkResponse = await fetchWithCookies(applinkUrl, applinkConfig);
     log ('Applink response status:', { status: applinkResponse.status, statusText: applinkResponse.statusText });
+
+    log('Applink response text:', await applinkResponse.text());
+
     
   } catch (error: unknown) {
     log('Error occurred:', {

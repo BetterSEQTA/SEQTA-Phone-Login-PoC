@@ -74,7 +74,8 @@ export class SeqtaAuth {
       headers: {
         'Content-Type': 'application/json',
         'X-User-Number': ssoPayload.n,
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${ssoPayload.t}`
       },
       token: ssoPayload.t
     };
